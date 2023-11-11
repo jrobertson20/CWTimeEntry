@@ -4,9 +4,6 @@
 {Ticket Number} {Client} - {Description of Ticket}
 {Description of time entry, multiline}
 
-# Time must match this regex
-# ^([1-9]|10|11|12)(:(15|30|45))*[ap]$
-
 
 ## EXAMPLE ##
 

@@ -118,25 +118,36 @@ function Send-CWTimeNote
     $TimeEntryTextList = ($TimeNoteText -split "\r\n\r\n(?:\r\n)*")
     
     $TimeEntryList = [System.Collections.Generic.List[TimeEntry]]@()
-    foreach($TimeEntryText in $TimeEntryTextList)
+    foreach($TimeEntryText in $TimeEntryTextList[0])
     {
-        $TimeEntryRegex = '(?<StartTime>\d{1,2}(:\d\d)?(a|p)) - (?<EndTime>\d{1,2}(:\d\d)?(a|p)) ?(?<BillableOption>(NB|NC))?\r\n(?<TicketId>\d+) (?<Client>[^-]+) - (?<TicketDescription>[\s\S]+?)\r\n(?<Notes>[\s\S]+)'
-        if($TimeEntryText -notmatch $TimeEntryRegex)
+        $TimeEntrySplit = $TimeEntryText -split "`n"
+        $TimeText = $TimeEntrySplit[0].Trim()
+        $TicketText = $TimeEntrySplit[1].Trim()
+        $NotesText = $TimeEntrySplit[2..($TimeEntrySplit.Count)] -join "`n"
+
+        if($TimeText -notmatch '^(?<StartTime>([1-9]|10|11|12)(:(15|30|45))?(a|p)) - (?<EndTime>([1-9]|10|11|12)(:(15|30|45))?(a|p)) ?(?<BillableOption>(NB|NC))?$')
         {
-            Write-Warning "Invalid time entry.`n$TimeEntryText"
+            Write-Warning "Invalid time entry. Time is not formatted properly.`n$TimeEntryText"
             return
         }
-    
-        $TicketId       = $Matches.TicketId
+
         $TimeStart      = ([datetime]"$datestring $($Matches.StartTime)m").ToUniversalTime()
         $TimeEnd        = ([datetime]"$datestring $($Matches.EndTime)m").ToUniversalTime()
-        $Notes          = "$($Matches.TicketDescription)`n$($Matches.Notes)"
         $BillableOption = switch ($Matches.BillableOption) {
             'NB'    {'DoNotBill'}
             'NC'    {'NoCharge'}
             default {'Billable'}
         }
+
+        if($TicketText -notmatch '^(?<TicketId>\d+) (?<Client>[^-]+) - (?<TicketDescription>[\s\S]+)')
+        {
+            Write-Warning "Invalid time entry. Ticket is not formatted properly.`n$TimeEntryText"
+            return
+        }
     
+        $TicketId       = $Matches.TicketId
+        $Notes          = "$($Matches.TicketDescription)`n$($NotesText)"
+        
         if($TimeEnd -le $TimeStart)
         {
             Write-Warning "Invalid time entry. Start time must be after end time.`n$TimeEntryText"
@@ -175,6 +186,7 @@ function Show-CWTimeNote
 
     if(-not (Test-Path $TimeNotePath))
     {
+        New-Item -ItemType File -Path $TimeNotePath -Force | Out-Null
         $script:template > $TimeNotePath
     }
 
@@ -224,15 +236,15 @@ function Edit-CWConfig
     # Setup config file
     try
     {
-        $config = Get-Content "$PSScriptRoot\config.json" | ConvertFrom-Json -Depth 50
+        $config = Get-Content "$PSScriptRoot\config.json" | ConvertFrom-Json
 
         Write-Host "Creating config file..."
         $config.CWconfig.memberIdentifier = $UserId
-        $config.CWconfig.workRole  = $WorkRole
-        $config.CWconfig.companyId = $companyId
-        $config.CWconfig.API.publickey  = $publickey
-        $config.CWconfig.API.clientId   = $clientId
-        $config.CWconfig.API.privatekey = $privatekey
+        $config.CWconfig.workRole         = $WorkRole
+        $config.CWconfig.companyId        = $companyId
+        $config.CWconfig.API.publickey    = $publickey
+        $config.CWconfig.API.clientId     = $clientId
+        $config.CWconfig.API.privatekey   = $privatekey
 
         # Write the config file
         $config | ConvertTo-Json -Depth 50 > "$PSScriptRoot\config.json"
@@ -277,25 +289,36 @@ function Measure-CWTimeNote
     $TimeEntryTextList = ($TimeNoteText -split "\r\n\r\n(?:\r\n)*")
     
     $TimeEntryList = [System.Collections.Generic.List[TimeEntry]]@()
-    foreach($TimeEntryText in $TimeEntryTextList)
+    foreach($TimeEntryText in $TimeEntryTextList[0])
     {
-        $TimeEntryRegex = '(?<StartTime>\d{1,2}(:\d\d)?(a|p)) - (?<EndTime>\d{1,2}(:\d\d)?(a|p)) ?(?<BillableOption>(NB|NC))?\r\n(?<TicketId>\d+) (?<Client>[^-]+) - (?<TicketDescription>[\s\S]+?)\r\n(?<Notes>[\s\S]+)'
-        if($TimeEntryText -notmatch $TimeEntryRegex)
+        $TimeEntrySplit = $TimeEntryText -split "`n"
+        $TimeText = $TimeEntrySplit[0].Trim()
+        $TicketText = $TimeEntrySplit[1].Trim()
+        $NotesText = $TimeEntrySplit[2..($TimeEntrySplit.Count)] -join "`n"
+
+        if($TimeText -notmatch '^(?<StartTime>([1-9]|10|11|12)(:(15|30|45))?(a|p)) - (?<EndTime>([1-9]|10|11|12)(:(15|30|45))?(a|p)) ?(?<BillableOption>(NB|NC))?$')
         {
-            Write-Warning "Invalid time entry.`n$TimeEntryText"
+            Write-Warning "Invalid time entry. Time is not formatted properly.`n$TimeEntryText"
             return
         }
-    
-        $TicketId       = $Matches.TicketId
+
         $TimeStart      = ([datetime]"$datestring $($Matches.StartTime)m").ToUniversalTime()
         $TimeEnd        = ([datetime]"$datestring $($Matches.EndTime)m").ToUniversalTime()
-        $Notes          = "$($Matches.TicketDescription)`n$($Matches.Notes)"
         $BillableOption = switch ($Matches.BillableOption) {
             'NB'    {'DoNotBill'}
             'NC'    {'NoCharge'}
             default {'Billable'}
         }
+
+        if($TicketText -notmatch '^(?<TicketId>\d+) (?<Client>[^-]+) - (?<TicketDescription>[\s\S]+)')
+        {
+            Write-Warning "Invalid time entry. Ticket is not formatted properly.`n$TimeEntryText"
+            return
+        }
     
+        $TicketId       = $Matches.TicketId
+        $Notes          = "$($Matches.TicketDescription)`n$($NotesText)"
+        
         if($TimeEnd -le $TimeStart)
         {
             Write-Warning "Invalid time entry. Start time must be after end time.`n$TimeEntryText"
