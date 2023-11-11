@@ -30,10 +30,10 @@ Author = 'Joseph Robertson'
 Copyright = '(c) Joseph Robertson. All rights reserved.'
 
 # Description of the functionality provided by this module
-# Description = ''
+Description = 'A Windows PowerShell module for managing time entries in ConnectWise'
 
 # Minimum version of the PowerShell engine required by this module
-PowerShellVersion = '5'
+PowerShellVersion = '5.1'
 
 # Name of the PowerShell host required by this module
 # PowerShellHostName = ''
@@ -95,13 +95,16 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        # Tags = @()
+        Tags = @(
+            '**PSEdition_Desktop**'
+            '**Windows**'
+        )
 
         # A URL to the license for this module.
         # LicenseUri = ''
 
         # A URL to the main website for this project.
-        # ProjectUri = ''
+        ProjectUri = 'https://github.com/jrobertson20/CWTimeEntry'
 
         # A URL to an icon representing this module.
         # IconUri = ''
