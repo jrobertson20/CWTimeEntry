@@ -69,7 +69,18 @@ PowerShellVersion = '5.1'
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = @('Get-CWTimeEntry','Remove-CWTimeEntry')
+FunctionsToExport = @(
+    'New-CWTime'
+    'Remove-CWTime'
+    'Get-CWTime'
+    'Clear-CWTime'
+    'Send-CWTimeNote'
+    'Show-CWTimeNote'
+    'Show-CWConfig'
+    'Show-CWLog'
+    'Show-CWTickets'
+    'Show-CWTemplate'
+)
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 # CmdletsToExport = @('Get-CWTimeEntry','Remove-CWTimeEntry')
