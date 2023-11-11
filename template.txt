@@ -1,0 +1,20 @@
+## FORMAT ##
+
+{Start Time} - {End Time} {Optional NB or NC}
+{Ticket Number} {Client} - {Description of Ticket}
+{Description of time entry, multiline}
+
+# Time must match this regex
+# ^([1-9]|10|11|12)(:(15|30|45))*[ap]$
+
+
+## EXAMPLE ##
+
+9a - 9:15a NB
+376526 Client One - General Tasks
+-DSU
+
+9:15a - 9:30a
+1048190 Client Two - Special Project
+-Did some work
+-Did some other work
