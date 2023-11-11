@@ -39,12 +39,10 @@ function New-CWTime
 
     $Response = Invoke-RestMethod -Method Post -Uri 'https://na.myconnectwise.net/v4_6_release/apis/3.0/time/entries' -Headers $Headers -Body $Body
 
-    return [TimeEntry]@{
-        'TicketId'       = $Response.chargeToId
-        'TimeStart'      = $Response.timeStart.ToLocalTime()
-        'TimeEnd'        = $Response.timeEnd.ToLocalTime()
-        'Notes'          = $Response.notes
+    return [PSCustomObject]@{
         'BillableOption' = $Response.billableOption
+        'TimeStart'      = ([datetime]$Response.timeStart).ToLocalTime()
+        'TimeEnd'        = ([datetime]$Response.timeEnd).ToLocalTime()
     }
 }
 
@@ -70,7 +68,7 @@ function Get-CWTime
     
     $TargetTimeEntryList = Invoke-RestMethod -Method Get -Uri $Uri -Headers $Headers
     
-    return ($TargetTimeEntryList | Select-Object id,billableOption,@{n='timeStart';e={$_.timeStart.ToLocalTime()}},@{n='timeEnd';e={$_.timeEnd.ToLocalTime()}},notes)
+    return ($TargetTimeEntryList | Select-Object id,billableOption,@{n='timeStart';e={([datetime]$_.timeStart).ToLocalTime()}},@{n='timeEnd';e={([datetime]$_.timeEnd).ToLocalTime()}},notes)
 }
 
 function Clear-CWTime
@@ -189,6 +187,63 @@ function Show-CWConfig
     param()
 
     Start-Process -FilePath $script:config.TextEditor -ArgumentList "$PSScriptRoot\config.json"
+}
+
+function Edit-CWConfig
+{
+    while ([string]::IsNullOrEmpty($UserId))
+    {
+        $UserId = Read-Host "Please enter your CW userId, e.g. jdoe"
+    }
+
+    while ([string]::IsNullOrEmpty($WorkRole))
+    {
+        $WorkRole = Read-Host "Please enter your CW Work Role"
+    }
+
+    while ([string]::IsNullOrEmpty($companyId))
+    {
+        $companyId = Read-Host "Please enter your CW Company Id"
+    }
+
+    while ([string]::IsNullOrEmpty($publickey))
+    {
+        $publickey = Read-Host "Please enter your CW API Public Key"
+    }
+
+    while ([string]::IsNullOrEmpty($clientId))
+    {
+        $clientId = Read-Host "Please enter your CW API Client Id"
+    }
+
+    while ([string]::IsNullOrEmpty($privatekey))
+    {
+        $privatekey = Read-Host "Please enter your CW API Private Key"
+    }
+
+    # Setup config file
+    try
+    {
+        $config = Get-Content "$PSScriptRoot\config.json" | ConvertFrom-Json -Depth 50
+
+        Write-Host "Creating config file..."
+        $config.CWconfig.memberIdentifier = $UserId
+        $config.CWconfig.workRole  = $WorkRole
+        $config.CWconfig.companyId = $companyId
+        $config.CWconfig.API.publickey  = $publickey
+        $config.CWconfig.API.clientId   = $clientId
+        $config.CWconfig.API.privatekey = $privatekey
+
+        # Write the config file
+        $config | ConvertTo-Json -Depth 50 > "$PSScriptRoot\config.json"
+    }
+    catch
+    {
+        Write-Warning "Error creating config file."
+        throw $_
+    }
+
+    Write-Host "Installation complete. Please Restart PowerShell session for changes to take effect."
 }
 
 function Show-CWTickets

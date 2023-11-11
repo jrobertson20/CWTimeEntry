@@ -1,13 +1,13 @@
 {
-    "TextEditor": "",
-    "CWconfig": {
-        "companyId": "",
-        "memberIdentifier": "",
-        "workRole": "",
-        "API": {
-            "publickey": "",
-            "clientId": "",
-            "privatekey": ""
-        }
+  "TextEditor": "C:\\WINDOWS\\system32\\notepad.exe",
+  "CWconfig": {
+    "companyId": "",
+    "memberIdentifier": "",
+    "workRole": "",
+    "API": {
+      "publickey": "",
+      "clientId": "",
+      "privatekey": ""
     }
+  }
 }
