@@ -1,53 +1,168 @@
 $script:config   = Get-Content $PSScriptRoot\config.json | ConvertFrom-Json
 $script:template = Get-Content $PSScriptRoot\template.txt -Raw
+$script:AuthString  = ($script:config.CWconfig.companyId + '+' + $script:config.CWconfig.API.publickey + ':' + $script:config.CWconfig.API.privatekey)
+$script:EncodedAuth = ([Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($script:AuthString)))
 
+class TimeEntry
+{
+    [string]$TicketId
+    [datetime]$TimeStart
+    [datetime]$TimeEnd
+    [string]$Notes
+    [string]$BillableOption
+}
 
 function New-CWTime
 {
-    [CmdletBinding()]
-    param()
+    [cmdletbinding()]
+    param(
+        [Parameter(mandatory=$true)]
+        [TimeEntry]$TimeEntry
+    )
 
-    Write-Information "Remove!"
-}
+    $Body = @{
+        chargeToType    = 'ServiceTicket'
+        chargeToId      = $TimeEntry.TicketId
+        timeStart       = $TimeEntry.TimeStart.ToString("yyyy-MM-ddTHH:mm:ssZ")
+        timeEnd         = $TimeEntry.TimeEnd.ToString("yyyy-MM-ddTHH:mm:ssZ")
+        notes           = $TimeEntry.Notes
+        member          = @{identifier = $script:config.CWconfig.memberIdentifier}
+        workRole        = @{name       = $script:config.CWconfig.workRole}
+        billableOption = $TimeEntry.BillableOption
+    } | ConvertTo-Json
+    
+    $Headers= @{
+        "Authorization" = "Basic $script:EncodedAuth"
+        "clientId"      = $script:config.CWconfig.API.clientId
+        "Content-Type"  = "application/json"
+    }
 
-function Remove-CWTime
-{
-    [CmdletBinding()]
-    param()
+    $Response = Invoke-RestMethod -Method Post -Uri 'https://na.myconnectwise.net/v4_6_release/apis/3.0/time/entries' -Headers $Headers -Body $Body
 
-    Write-Information "Remove!"
+    return [TimeEntry]@{
+        'TicketId'       = $Response.chargeToId
+        'TimeStart'      = $Response.timeStart.ToLocalTime()
+        'TimeEnd'        = $Response.timeEnd.ToLocalTime()
+        'Notes'          = $Response.notes
+        'BillableOption' = $Response.billableOption
+    }
 }
 
 function Get-CWTime
 {
-    [CmdletBinding()]
+    [cmdletbinding()]
     param(
-        [datetime]$Date = (Get-Date)
+        [datetime]$date = (Get-Date)
     )
-
-    Write-Information "Get!"
+    
+    $TodayDateTime       = (Get-Date -Year $date.Year -Month $date.Month -Day $date.Day -Hour 0 -Minute 0 -Second 0).ToUniversalTime()
+    $StartDateTimeString = $TodayDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ")
+    $EndDateTimeString   = $TodayDateTime.AddDays(1).ToString("yyyy-MM-ddTHH:mm:ssZ")
+    
+    $MemberIdentifier = $script:config.CWconfig.memberIdentifier
+    $Uri = "https://na.myconnectwise.net/v4_6_release/apis/3.0/time/entries?pageSize=1000&conditions=member/identifier='$MemberIdentifier' and timeStart >= [$StartDateTimeString] and timeStart <= [$EndDateTimeString]"
+    
+    $Headers = @{
+        "Authorization" = "Basic $script:EncodedAuth"
+        "Content-Type"  = "application/json"
+        "clientId"      = $script:config.CWconfig.API.clientId
+    }
+    
+    $TargetTimeEntryList = Invoke-RestMethod -Method Get -Uri $Uri -Headers $Headers
+    
+    return ($TargetTimeEntryList | Select-Object id,billableOption,@{n='timeStart';e={$_.timeStart.ToLocalTime()}},@{n='timeEnd';e={$_.timeEnd.ToLocalTime()}},notes)
 }
 
 function Clear-CWTime
 {
-    [CmdletBinding()]
+    [cmdletbinding()]
     param(
-        [datetime]$Date = (Get-Date)
+        [datetime]$date = (Get-Date)
     )
+    
+    $TimeEntryList = Get-CWTime $date
 
-    Write-Information "Remove!"
+    foreach($TimeEntry in $TimeEntryList)
+    {
+        $TimeEntry | Select-Object timeStart,timeEnd,notes
+        Remove-CWTime $TimeEntry.id
+    }
+}
+function Remove-CWTime
+{
+    [cmdletbinding()]
+    param(
+        [Parameter(mandatory=$true)]
+        [string]$TimeEntryId
+    )
+    
+    $Headers = @{
+        "Authorization" = "Basic $script:EncodedAuth"
+        "Content-Type"  = "application/json"
+        "clientId"      = $script:config.CWconfig.API.clientId
+    }
+    
+    $Response = Invoke-RestMethod -Method Delete -Uri "https://na.myconnectwise.net/v4_6_release/apis/3.0/time/entries/$TimeEntryId" -Headers $Headers
+
+    return
 }
 
 function Send-CWTimeNote
 {
-    [CmdletBinding()]
     param(
         [datetime]$Date = (Get-Date)
     )
+    
+    $datestring = $date.ToString("yyyy-MM-dd")
+    $TimeNotePath = "$PSScriptRoot\TimeNotes\$datestring.txt"
+    $TimeNoteText = Get-Content -Path $TimeNotePath -Raw
+    
+    $TimeEntryTextList = ($TimeNoteText -split "\r\n\r\n(?:\r\n)*")
+    
+    $TimeEntryList = [System.Collections.Generic.List[TimeEntry]]@()
+    foreach($TimeEntryText in $TimeEntryTextList)
+    {
+        $TimeEntryRegex = '(?<StartTime>\d{1,2}(:\d\d)?(a|p)) - (?<EndTime>\d{1,2}(:\d\d)?(a|p)) ?(?<BillableOption>(NB|NC))?\r\n(?<TicketId>\d+) (?<Client>[^-]+) - (?<TicketDescription>[\s\S]+?)\r\n(?<Notes>[\s\S]+)'
+        if($TimeEntryText -notmatch $TimeEntryRegex)
+        {
+            Write-Warning "Invalid time entry.`n$TimeEntryText"
+            return
+        }
+    
+        $TicketId       = $Matches.TicketId
+        $TimeStart      = ([datetime]"$datestring $($Matches.StartTime)m").ToUniversalTime()
+        $TimeEnd        = ([datetime]"$datestring $($Matches.EndTime)m").ToUniversalTime()
+        $Notes          = "$($Matches.TicketDescription)`n$($Matches.Notes)"
+        $BillableOption = switch ($Matches.BillableOption) {
+            'NB'    {'DoNotBill'}
+            'NC'    {'NoCharge'}
+            default {'Billable'}
+        }
+    
+        if($TimeEnd -le $TimeStart)
+        {
+            Write-Warning "Invalid time entry. Start time must be after end time.`n$TimeEntryText"
+            return
+        }
+    
+        if(($TimeEnd - $TimeStart).TotalHours -gt 8)
+        {
+            Write-Warning "WARNING: Time entry is over 8 hours long.`n$TimeEntryText"
+        }
+    
+        $TimeEntryList.Add([TimeEntry]@{
+            'TicketId'       = $TicketId
+            'TimeStart'      = $TimeStart
+            'TimeEnd'        = $TimeEnd
+            'Notes'          = $Notes
+            'BillableOption' = $BillableOption
+        })
+    }
 
-    Write-Host $Date
-
-    Write-Information "Get!"
+    foreach($TimeEntry in $TimeEntryList)
+    {
+        New-CWTime -TimeEntry $TimeEntry
+    }
 }
 
 function Show-CWTimeNote
@@ -76,14 +191,6 @@ function Show-CWConfig
     Start-Process -FilePath $script:config.TextEditor -ArgumentList "$PSScriptRoot\config.json"
 }
 
-function Show-CWLog
-{
-    [CmdletBinding()]
-    param()
-
-    Start-Process -FilePath $script:config.TextEditor -ArgumentList "$PSScriptRoot\log.txt"
-}
-
 function Show-CWTickets
 {
     [cmdletbinding()]
@@ -98,4 +205,66 @@ function Show-CWTemplate
     param()
 
     Start-Process -FilePath $script:config.TextEditor -ArgumentList "$PSScriptRoot\template.txt"
+}
+
+function Measure-CWTimeNote
+{
+    [cmdletbinding()]
+    param
+    (
+        [datetime]$date = (get-date)
+    )
+
+    $datestring = $date.ToString("yyyy-MM-dd")
+    $TimeNotePath = "$PSScriptRoot\TimeNotes\$datestring.txt"
+    $TimeNoteText = Get-Content -Path $TimeNotePath -Raw
+    
+    $TimeEntryTextList = ($TimeNoteText -split "\r\n\r\n(?:\r\n)*")
+    
+    $TimeEntryList = [System.Collections.Generic.List[TimeEntry]]@()
+    foreach($TimeEntryText in $TimeEntryTextList)
+    {
+        $TimeEntryRegex = '(?<StartTime>\d{1,2}(:\d\d)?(a|p)) - (?<EndTime>\d{1,2}(:\d\d)?(a|p)) ?(?<BillableOption>(NB|NC))?\r\n(?<TicketId>\d+) (?<Client>[^-]+) - (?<TicketDescription>[\s\S]+?)\r\n(?<Notes>[\s\S]+)'
+        if($TimeEntryText -notmatch $TimeEntryRegex)
+        {
+            Write-Warning "Invalid time entry.`n$TimeEntryText"
+            return
+        }
+    
+        $TicketId       = $Matches.TicketId
+        $TimeStart      = ([datetime]"$datestring $($Matches.StartTime)m").ToUniversalTime()
+        $TimeEnd        = ([datetime]"$datestring $($Matches.EndTime)m").ToUniversalTime()
+        $Notes          = "$($Matches.TicketDescription)`n$($Matches.Notes)"
+        $BillableOption = switch ($Matches.BillableOption) {
+            'NB'    {'DoNotBill'}
+            'NC'    {'NoCharge'}
+            default {'Billable'}
+        }
+    
+        if($TimeEnd -le $TimeStart)
+        {
+            Write-Warning "Invalid time entry. Start time must be after end time.`n$TimeEntryText"
+            return
+        }
+    
+        if(($TimeEnd - $TimeStart).TotalHours -gt 8)
+        {
+            Write-Warning "WARNING: Time entry is over 8 hours long.`n$TimeEntryText"
+        }
+    
+        $TimeEntryList.Add([TimeEntry]@{
+            'TicketId'       = $TicketId
+            'TimeStart'      = $TimeStart
+            'TimeEnd'        = $TimeEnd
+            'Notes'          = $Notes
+            'BillableOption' = $BillableOption
+        })
+    }
+
+    return [PSCustomObject]@{
+        'Total'       = ($TimeEntryList | Select-Object -Property @{e={($_.TimeEnd - $_.TimeStart).TotalHours}} | Measure-Object -sum -Property *).Sum
+        'Billable'    = ($TimeEntryList | Where-Object {$_.BillableOption -like 'Billable'} | Select-Object -Property @{e={($_.TimeEnd - $_.TimeStart).TotalHours}} | Measure-Object -sum -Property *).Sum
+        'Non-Billable' = ($TimeEntryList | Where-Object {$_.BillableOption -like 'DoNotBill'} | Select-Object -Property @{e={($_.TimeEnd - $_.TimeStart).TotalHours}} | Measure-Object -sum -Property *).Sum
+        'NoCharge' = ($TimeEntryList | Where-Object {$_.BillableOption -like 'NoCharge'} | Select-Object -Property @{e={($_.TimeEnd - $_.TimeStart).TotalHours}} | Measure-Object -sum -Property *).Sum
+    }
 }

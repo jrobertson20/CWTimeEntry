@@ -71,13 +71,13 @@ PowerShellVersion = '5.1'
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
 FunctionsToExport = @(
     'New-CWTime'
-    'Remove-CWTime'
     'Get-CWTime'
     'Clear-CWTime'
+    'Remove-CWTime'
     'Send-CWTimeNote'
     'Show-CWTimeNote'
+    'Measure-CWTimeNote'
     'Show-CWConfig'
-    'Show-CWLog'
     'Show-CWTickets'
     'Show-CWTemplate'
 )

@@ -1,15 +1,13 @@
 {
-  "TimeNotesPath": "C:\\repos\\Joey\\psgallery\\CWTimeEntry",
-  "TextEditor": "C:\\Users\\josep\\AppData\\Local\\Programs\\Microsoft VS Code\\code.exe",
-  "workEmail": "",
-  "CWconfig": {
-    "companyId": "",
-    "memberIdentifier": "",
-    "workRole": "",
-    "API": {
-      "publickey": "",
-      "clientId": "",
-      "privatekey": ""
+    "TextEditor": "",
+    "CWconfig": {
+        "companyId": "",
+        "memberIdentifier": "",
+        "workRole": "",
+        "API": {
+            "publickey": "",
+            "clientId": "",
+            "privatekey": ""
+        }
     }
-  }
 }
