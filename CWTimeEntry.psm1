@@ -190,7 +190,7 @@ function Show-CWTimeNote
         $script:template > $TimeNotePath
     }
 
-    Start-Process -FilePath $script:config.TextEditor -ArgumentList $TimeNotePath
+    & $script:config.TextEditor $TimeNotePath
 }
 
 function Show-CWConfig
@@ -198,7 +198,7 @@ function Show-CWConfig
     [CmdletBinding()]
     param()
 
-    Start-Process -FilePath $script:config.TextEditor -ArgumentList "$PSScriptRoot\config.json"
+    & $script:config.TextEditor "$PSScriptRoot\config.json"
 }
 
 function Edit-CWConfig
@@ -263,7 +263,7 @@ function Show-CWTickets
     [cmdletbinding()]
     param()
 
-    Start-Process -FilePath $script:config.TextEditor -ArgumentList "$PSScriptRoot\tickets.txt"
+    & $script:config.TextEditor "$PSScriptRoot\tickets.txt"
 }
 
 function Show-CWTemplate
@@ -271,7 +271,7 @@ function Show-CWTemplate
     [cmdletbinding()]
     param()
 
-    Start-Process -FilePath $script:config.TextEditor -ArgumentList "$PSScriptRoot\template.txt"
+    & $script:config.TextEditor "$PSScriptRoot\template.txt"
 }
 
 function Measure-CWTimeNote
