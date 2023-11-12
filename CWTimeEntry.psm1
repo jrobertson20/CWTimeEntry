@@ -118,7 +118,7 @@ function Send-CWTimeNote
     $TimeEntryTextList = ($TimeNoteText -split "\r\n\r\n(?:\r\n)*")
     
     $TimeEntryList = [System.Collections.Generic.List[TimeEntry]]@()
-    foreach($TimeEntryText in $TimeEntryTextList[0])
+    foreach($TimeEntryText in $TimeEntryTextList)
     {
         $TimeEntrySplit = $TimeEntryText -split "`n"
         $TimeText = $TimeEntrySplit[0].Trim()
@@ -289,7 +289,7 @@ function Measure-CWTimeNote
     $TimeEntryTextList = ($TimeNoteText -split "\r\n\r\n(?:\r\n)*")
     
     $TimeEntryList = [System.Collections.Generic.List[TimeEntry]]@()
-    foreach($TimeEntryText in $TimeEntryTextList[0])
+    foreach($TimeEntryText in $TimeEntryTextList)
     {
         $TimeEntrySplit = $TimeEntryText -split "`n"
         $TimeText = $TimeEntrySplit[0].Trim()
