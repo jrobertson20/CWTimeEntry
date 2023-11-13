@@ -1,5 +1,5 @@
-$script:config   = Get-Content $PSScriptRoot\config.json | ConvertFrom-Json
-$script:template = Get-Content $PSScriptRoot\template.txt -Raw
+$script:DataPath = "$env:USERPROFILE\Documents\CWTimeEntry"
+$script:Config   = Get-Content $script:DataPath\config.json | ConvertFrom-Json
 $script:AuthString  = ($script:config.CWconfig.companyId + '+' + $script:config.CWconfig.API.publickey + ':' + $script:config.CWconfig.API.privatekey)
 $script:EncodedAuth = ([Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($script:AuthString)))
 
@@ -112,7 +112,7 @@ function Send-CWTimeNote
     )
     
     $datestring = $date.ToString("yyyy-MM-dd")
-    $TimeNotePath = "$PSScriptRoot\TimeNotes\$datestring.txt"
+    $TimeNotePath = "$script:DataPath\TimeNotes\$datestring.txt"
     $TimeNoteText = Get-Content -Path $TimeNotePath -Raw
     
     $TimeEntryTextList = ($TimeNoteText -split "\r\n\r\n(?:\r\n)*")
@@ -182,12 +182,18 @@ function Show-CWTimeNote
     )
 
     $datestring = $date.ToString("yyyy-MM-dd")
-    $TimeNotePath = "$PSScriptRoot\TimeNotes\$datestring.txt"
+    $TimeNotePath = "$script:DataPath\TimeNotes\$datestring.txt"
+
+    if(-not (Test-Path "$script:DataPath\template.txt"))
+    {
+        New-Item -ItemType File -Path "$script:DataPath\template.txt" -Force | Out-Null
+        Get-Content "$PSScriptRoot\default-template.txt" > "$script:DataPath\template.txt"
+    }
 
     if(-not (Test-Path $TimeNotePath))
     {
         New-Item -ItemType File -Path $TimeNotePath -Force | Out-Null
-        $script:template > $TimeNotePath
+        Get-Content $script:DataPath\template.txt > $TimeNotePath
     }
 
     & $script:config.TextEditor $TimeNotePath
@@ -198,11 +204,17 @@ function Show-CWConfig
     [CmdletBinding()]
     param()
 
-    & $script:config.TextEditor "$PSScriptRoot\config.json"
+    & $script:config.TextEditor "$script:DataPath\config.json"
 }
 
 function Edit-CWConfig
 {
+    if(-not (Test-Path "$script:DataPath\config.json"))
+    {
+        New-Item -ItemType File -Path "$script:DataPath\config.json" -Force | Out-Null
+        Get-Content "$PSScriptRoot\default-config.json" > "$script:DataPath\config.json"
+    }
+
     while ([string]::IsNullOrEmpty($UserId))
     {
         $UserId = Read-Host "Please enter your CW userId, e.g. jdoe"
@@ -236,18 +248,21 @@ function Edit-CWConfig
     # Setup config file
     try
     {
-        $config = Get-Content "$PSScriptRoot\config.json" | ConvertFrom-Json
+        $NewConfig = Get-Content "$script:DataPath\config.json" | ConvertFrom-Json
 
         Write-Host "Creating config file..."
-        $config.CWconfig.memberIdentifier = $UserId
-        $config.CWconfig.workRole         = $WorkRole
-        $config.CWconfig.companyId        = $companyId
-        $config.CWconfig.API.publickey    = $publickey
-        $config.CWconfig.API.clientId     = $clientId
-        $config.CWconfig.API.privatekey   = $privatekey
+        $NewConfig.CWconfig.memberIdentifier = $UserId
+        $NewConfig.CWconfig.workRole         = $WorkRole
+        $NewConfig.CWconfig.companyId        = $companyId
+        $NewConfig.CWconfig.API.publickey    = $publickey
+        $NewConfig.CWconfig.API.clientId     = $clientId
+        $NewConfig.CWconfig.API.privatekey   = $privatekey
 
         # Write the config file
-        $config | ConvertTo-Json -Depth 50 > "$PSScriptRoot\config.json"
+        $NewConfig | ConvertTo-Json -Depth 50 > "$script:DataPath\config.json"
+        $script:Config = Get-Content "$script:DataPath\config.json" | ConvertFrom-Json
+        $script:AuthString  = ($script:config.CWconfig.companyId + '+' + $script:config.CWconfig.API.publickey + ':' + $script:config.CWconfig.API.privatekey)
+        $script:EncodedAuth = ([Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($script:AuthString)))
     }
     catch
     {
@@ -255,7 +270,7 @@ function Edit-CWConfig
         throw $_
     }
 
-    Write-Host "Installation complete. Please Restart PowerShell session for changes to take effect."
+    Write-Host "Configuration complete."
 }
 
 function Show-CWTickets
@@ -263,7 +278,7 @@ function Show-CWTickets
     [cmdletbinding()]
     param()
 
-    & $script:config.TextEditor "$PSScriptRoot\tickets.txt"
+    & $script:config.TextEditor "$script:DataPath\tickets.txt"
 }
 
 function Show-CWTemplate
@@ -271,7 +286,7 @@ function Show-CWTemplate
     [cmdletbinding()]
     param()
 
-    & $script:config.TextEditor "$PSScriptRoot\template.txt"
+    & $script:config.TextEditor "$script:DataPath\template.txt"
 }
 
 function Measure-CWTimeNote
@@ -283,7 +298,7 @@ function Measure-CWTimeNote
     )
 
     $datestring = $date.ToString("yyyy-MM-dd")
-    $TimeNotePath = "$PSScriptRoot\TimeNotes\$datestring.txt"
+    $TimeNotePath = "$script:DataPath\TimeNotes\$datestring.txt"
     $TimeNoteText = Get-Content -Path $TimeNotePath -Raw
     
     $TimeEntryTextList = ($TimeNoteText -split "\r\n\r\n(?:\r\n)*")
@@ -356,7 +371,7 @@ function Get-CWSummary
     )
 
     $datestring = $date.ToString("yyyy-MM-dd")
-    $TimeNotePath = "$PSScriptRoot\TimeNotes\$datestring.txt"
+    $TimeNotePath = "$script:DataPath\TimeNotes\$datestring.txt"
     $TimeNoteText = Get-Content -Path $TimeNotePath
 
     $OutputList = [System.Collections.Generic.List[string]]@()
