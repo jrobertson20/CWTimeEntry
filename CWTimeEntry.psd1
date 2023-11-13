@@ -12,7 +12,7 @@
 RootModule = 'CWTimeEntry.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.0.6'
+ModuleVersion = '0.0.7'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -81,6 +81,7 @@ FunctionsToExport = @(
     'Show-CWTickets'
     'Show-CWTemplate'
     'Edit-CWConfig'
+    'Get-CWSummary'
 )
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.

@@ -347,7 +347,7 @@ function Measure-CWTimeNote
     }
 }
 
-function Get-CWTextDSU
+function Get-CWSummary
 {
     [cmdletbinding()]
     param
