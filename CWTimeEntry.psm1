@@ -346,3 +346,29 @@ function Measure-CWTimeNote
         'NoCharge' = ($TimeEntryList | Where-Object {$_.BillableOption -like 'NoCharge'} | Select-Object -Property @{e={($_.TimeEnd - $_.TimeStart).TotalHours}} | Measure-Object -sum -Property *).Sum
     }
 }
+
+function Get-CWTextDSU
+{
+    [cmdletbinding()]
+    param
+    (
+        [datetime]$date = (get-date)
+    )
+
+    $datestring = $date.ToString("yyyy-MM-dd")
+    $TimeNotePath = "$PSScriptRoot\TimeNotes\$datestring.txt"
+    $TimeNoteText = Get-Content -Path $TimeNotePath
+
+    $OutputList = [System.Collections.Generic.List[string]]@()
+
+    $Client = ''
+
+    switch -regex ($TimeNoteText) {
+        '^\d{1,2}(:\d\d)?(a|p)' { continue }
+        '^\d{6,7} (?<Client>[\s\S]+?) -' {$Client = $Matches.Client}
+        '^$' { continue }
+        default { $OutputList.Add("$Client - $($_.Trim('-'))") }
+    }
+
+    return ($OutputList | Sort-Object -Property @{e={$_.split('-')[0].trim()}})
+}
