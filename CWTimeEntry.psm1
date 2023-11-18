@@ -37,12 +37,20 @@ function New-CWTime
         "Content-Type"  = "application/json"
     }
 
-    $Response = Invoke-RestMethod -Method Post -Uri 'https://na.myconnectwise.net/v4_6_release/apis/3.0/time/entries' -Headers $Headers -Body $Body
+    $Version = [double]"$($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor)"
+    if($Version -ge 7.4)
+    {
+        $Response = Invoke-RestMethod -Method Post -Uri 'https://na.myconnectwise.net/v4_6_release/apis/3.0/time/entries' -Headers $Headers -Body $Body -AllowInsecureRedirect
+    }
+    else
+    {
+        $Response = Invoke-RestMethod -Method Post -Uri 'https://na.myconnectwise.net/v4_6_release/apis/3.0/time/entries' -Headers $Headers -Body $Body
+    }
 
     return [PSCustomObject]@{
         'BillableOption' = $Response.billableOption
-        'TimeStart'      = ([datetime]$Response.timeStart).ToLocalTime()
-        'TimeEnd'        = ([datetime]$Response.timeEnd).ToLocalTime()
+        'TimeStart'      = ([datetime]$Response.timeStart).ToLocalTime().ToString("h:mmt").ToLower()
+        'TimeEnd'        = ([datetime]$Response.timeEnd).ToLocalTime().ToString("h:mmt").ToLower()
     }
 }
 
@@ -115,7 +123,7 @@ function Send-CWTimeNote
     $TimeNotePath = "$script:DataPath\TimeNotes\$datestring.txt"
     $TimeNoteText = Get-Content -Path $TimeNotePath -Raw
     
-    $TimeEntryTextList = ($TimeNoteText -split "\r\n\r\n(?:\r\n)*")
+    $TimeEntryTextList = ($TimeNoteText -split "\r\n\r\n(?:\r\n)*").where({![string]::IsNullOrEmpty($_)})
     
     $TimeEntryList = [System.Collections.Generic.List[TimeEntry]]@()
     foreach($TimeEntryText in $TimeEntryTextList)
@@ -125,7 +133,7 @@ function Send-CWTimeNote
         $TicketText = $TimeEntrySplit[1].Trim()
         $NotesText = $TimeEntrySplit[2..($TimeEntrySplit.Count)] -join "`n"
 
-        if($TimeText -notmatch '^(?<StartTime>([1-9]|10|11|12)(:(15|30|45))?(a|p)) - (?<EndTime>([1-9]|10|11|12)(:(15|30|45))?(a|p)) ?(?<BillableOption>(NB|NC))?$')
+        if($TimeText -notmatch '^(?<StartTime>([1-9]|10|11|12)(:(00|15|30|45))?[apAP]) - (?<EndTime>([1-9]|10|11|12)(:(00|15|30|45))?[apAP]) ?(?<BillableOption>(NB|NC))?$')
         {
             Write-Warning "Invalid time entry. Time is not formatted properly.`n$TimeEntryText"
             return
@@ -301,7 +309,7 @@ function Measure-CWTimeNote
     $TimeNotePath = "$script:DataPath\TimeNotes\$datestring.txt"
     $TimeNoteText = Get-Content -Path $TimeNotePath -Raw
     
-    $TimeEntryTextList = ($TimeNoteText -split "\r\n\r\n(?:\r\n)*")
+    $TimeEntryTextList = ($TimeNoteText -split "\r\n\r\n(?:\r\n)*").where({![string]::IsNullOrEmpty($_)})
     
     $TimeEntryList = [System.Collections.Generic.List[TimeEntry]]@()
     foreach($TimeEntryText in $TimeEntryTextList)
@@ -311,7 +319,7 @@ function Measure-CWTimeNote
         $TicketText = $TimeEntrySplit[1].Trim()
         $NotesText = $TimeEntrySplit[2..($TimeEntrySplit.Count)] -join "`n"
 
-        if($TimeText -notmatch '^(?<StartTime>([1-9]|10|11|12)(:(15|30|45))?(a|p)) - (?<EndTime>([1-9]|10|11|12)(:(15|30|45))?(a|p)) ?(?<BillableOption>(NB|NC))?$')
+        if($TimeText -notmatch '^(?<StartTime>([1-9]|10|11|12)(:(00|15|30|45))?[apAP]) - (?<EndTime>([1-9]|10|11|12)(:(00|15|30|45))?[apAP]) ?(?<BillableOption>(NB|NC))?$')
         {
             Write-Warning "Invalid time entry. Time is not formatted properly.`n$TimeEntryText"
             return
