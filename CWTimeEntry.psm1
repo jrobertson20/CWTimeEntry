@@ -124,6 +124,8 @@ function Send-CWTimeNote
     $TimeNoteText = Get-Content -Path $TimeNotePath -Raw
     
     $TimeEntryTextList = ($TimeNoteText -split "\r\n\r\n(?:\r\n)*").where({![string]::IsNullOrEmpty($_)})
+
+    Clear-CWTime
     
     $TimeEntryList = [System.Collections.Generic.List[TimeEntry]]@()
     foreach($TimeEntryText in $TimeEntryTextList)
