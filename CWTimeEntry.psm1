@@ -122,7 +122,8 @@ function Send-CWTimeNote
     $datestring = $date.ToString("yyyy-MM-dd")
     $TimeNotePath = "$script:DataPath\TimeNotes\$datestring.txt"
     $TimeNoteText = Get-Content -Path $TimeNotePath -Raw
-    
+    $TimeNoteText = $TimeNoteText.Trim()    # Trim to remove blank lines
+
     $TimeEntryTextList = ($TimeNoteText -split "\r\n\r\n(?:\r\n)*").where({![string]::IsNullOrEmpty($_)})
 
     Clear-CWTime
