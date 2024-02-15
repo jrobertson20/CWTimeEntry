@@ -1,5 +1,5 @@
-$script:DataPath = "$env:USERPROFILE\Documents\CWTimeEntry"
-$script:Config   = Get-Content $script:DataPath\config.json | ConvertFrom-Json
+$script:DataPath = Join-Path -Path $env:HOME -ChildPath 'Documents' -AdditionalChildPath 'CWTimeEntry'
+$script:Config   = Get-Content (Join-Path -Path $script:DataPath -ChildPath 'config.json') -ErrorAction SilentlyContinue | ConvertFrom-Json
 $script:AuthString  = ($script:config.CWconfig.companyId + '+' + $script:config.CWconfig.API.publickey + ':' + $script:config.CWconfig.API.privatekey)
 $script:EncodedAuth = ([Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($script:AuthString)))
 
@@ -207,7 +207,7 @@ function Show-CWTimeNote
         Get-Content $script:DataPath\template.txt > $TimeNotePath
     }
 
-    & $script:config.TextEditor $TimeNotePath
+    & $TimeNotePath
 }
 
 function Show-CWConfig
@@ -215,7 +215,7 @@ function Show-CWConfig
     [CmdletBinding()]
     param()
 
-    & $script:config.TextEditor "$script:DataPath\config.json"
+    & "$script:DataPath\config.json"
 }
 
 function Edit-CWConfig
@@ -289,7 +289,7 @@ function Show-CWTickets
     [cmdletbinding()]
     param()
 
-    & $script:config.TextEditor "$script:DataPath\tickets.txt"
+    & "$script:DataPath\tickets.txt"
 }
 
 function Show-CWTemplate
@@ -297,7 +297,7 @@ function Show-CWTemplate
     [cmdletbinding()]
     param()
 
-    & $script:config.TextEditor "$script:DataPath\template.txt"
+    & "$script:DataPath\template.txt"
 }
 
 function Measure-CWTimeNote
